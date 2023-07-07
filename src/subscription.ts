@@ -48,7 +48,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.posts.creates.length > 0) {
       for (const post of ops.posts.creates) {
         if (verbose) process.stdout.write('p')
-        await this.executeQuery("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, text: $text, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) MERGE (person)-[:AUTHOR_OF {weight: 0}]->(post)",
+        await this.executeQuery("CREATE (post:Post {uri: $uri, cid: $cid, author: $author, text: $text, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) ON CREATE SET person.follows_primed = false MERGE (person)-[:AUTHOR_OF {weight: 0}]->(post)",
           { uri: post.uri, cid: post.cid, author: post.author, text: post.record.text, createdAt: post.record.createdAt })
         const replyRoot = post.record?.reply?.root ? post.record.reply.root.uri : null
         const replyParent = post.record?.reply?.parent ? post.record.reply.parent.uri : null
@@ -76,7 +76,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.follows.creates.length > 0) {
       for (const follow of ops.follows.creates) {
         if (verbose) process.stdout.write('f')
-        await this.executeQuery("MERGE (p1:Person {did: $authorDid}) MERGE (p2:Person {did: $subjectDid}) MERGE (p1)-[:FOLLOW {weight: 2}]->(p2)", { authorDid: follow.author, subjectDid: follow.record.subject })
+        await this.executeQuery("MERGE (p1:Person {did: $authorDid}) ON CREATE SET p1.follows_primed = false MERGE (p2:Person {did: $subjectDid}) ON CREATE SET p2.follows_primed = false MERGE (p1)-[:FOLLOW {weight: 2}]->(p2)", { authorDid: follow.author, subjectDid: follow.record.subject })
       }
     }
 
@@ -90,7 +90,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.likes.creates.length > 0) {
       for (const like of ops.likes.creates) {
         if (verbose) process.stdout.write('l')
-        await this.executeQuery("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", { authorDid: like.author, postUri: like.record.subject.uri })
+        await this.executeQuery("MERGE (person:Person {did: $authorDid}) ON CREATE SET person.follows_primed = false MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", { authorDid: like.author, postUri: like.record.subject.uri })
       }
     }
 
@@ -104,7 +104,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.reposts.creates.length > 0) {
       for (const repost of ops.reposts.creates) {
         if (verbose) process.stdout.write('r')
-        await this.executeQuery("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) RETURN p", { uri: repost.uri, cid: repost.cid, author: repost.author, repostUri: repost.record.subject.uri, createdAt: repost.record.createdAt })
+        await this.executeQuery("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) ON CREATE SET person.follows_primed = false MERGE (person)-[:AUTHOR_OF {weight: 0}]->(p) RETURN p", { uri: repost.uri, cid: repost.cid, author: repost.author, repostUri: repost.record.subject.uri, createdAt: repost.record.createdAt })
       }
     }
   }

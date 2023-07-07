@@ -46,7 +46,7 @@ export async function parallelQueries(did: string, max_node_id: number, queryMap
         const records: Record[] = results[i].records;
         for (let j = 0; j < records.length; j++) {
             try {
-                if (records[j] !== undefined) {
+                if (records[j] !== undefined && records[j].get(0) !== null && records[j].get(1) !== null && records[j].get(2) !== null) {
                     returnObj[key].push({
                         id: records[j].get(0).low,
                         uri: records[j].get(1),
@@ -57,7 +57,8 @@ export async function parallelQueries(did: string, max_node_id: number, queryMap
                     })
                 }
             } catch (e) {
-                console.error(key + ' results error')
+                if (e instanceof Error) console.error(key + ' results error: ' + e.message)
+                else console.error(key + ' results error: unknown')
             }
         }
         i++;

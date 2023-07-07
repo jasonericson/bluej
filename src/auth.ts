@@ -10,7 +10,7 @@ export const validateAuth = async (
   const { authorization = '' } = req.headers
   if (!authorization.startsWith('Bearer ')) {
     // temp hack so we can test locally
-    return 'did:plc:ewgejell4547pukut5255ibm'
+    return 'did:plc:da4qrww7zq3flsr2zialldef'
     //throw new AuthRequiredError()
   }
   const jwt = authorization.replace('Bearer ', '').trim()
