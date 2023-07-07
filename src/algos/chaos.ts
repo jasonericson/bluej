@@ -61,6 +61,8 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
 
         console.log('[chaos] [', requesterDid, '] l:', limit, 'p:', position, 'c:', cursor)
 
+        // if necessary, populate the requester's following list
+        // (for any people they followed before this feed service started running)
         let session = driver.session()
         let followsPrimedResult = await session.run('MATCH (requester:Person { did:$requesterDid }) RETURN requester.follows_primed', { requesterDid: requesterDid })
         if (followsPrimedResult.records.length === 0 || followsPrimedResult.records[0].get(0) === false) {
