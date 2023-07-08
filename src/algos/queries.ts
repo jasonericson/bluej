@@ -61,3 +61,13 @@ export const communityQuery =
     'ORDER BY score DESC, hour_age ASC, post.indexedAt DESC ' +
     'LIMIT '
 
+
+export const followSimpleQuery =
+    'MATCH (my_person:Person {did: $did })-[:FOLLOW]->(follow_person:Person) ' +
+    'MATCH (follow_person) - [:AUTHOR_OF] -> (post:Post) ' +
+    'WHERE post.indexedAt IS NOT NULL  AND NOT exists((post)-[:PARENT]->(:Post)) ' +
+    'WITH localDateTime() - post.indexedAt as duration, post ' +
+    'WHERE duration.day < 1 AND duration.hour < 12 ' +
+    'RETURN ID(post), post.uri, post.cid ' +
+    'ORDER BY post.indexedAt DESC ' +
+    'LIMIT 500'
