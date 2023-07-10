@@ -8,7 +8,7 @@ import { parallelQueries } from './parralel-queries'
 import { weightedRoundRobin, deduplicateArray } from './weighted-round-robin'
 import { followSimpleQuery } from './queries'
 
-export const uri = 'at://did:plc:da4qrww7zq3flsr2zialldef/app.bsky.feed.generator/chaos'
+export const uri = 'at://did:web:bskyfeed.jasonericson.com/app.bsky.feed.generator/chaos'
 
 interface PostData {
     randId: number;
