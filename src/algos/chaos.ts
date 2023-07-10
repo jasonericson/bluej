@@ -15,10 +15,6 @@ interface PostData {
     uri: string;
 }
 
-function reverseString(str) {
-    return str.split("").reverse().join("")
-}
-
 function xorshift(value: number): number {
     // Xorshift*32
     // Based on George Marsaglia's work: http://www.jstatsoft.org/v08/i14/paper
@@ -33,11 +29,14 @@ function getSafeSeed(seed: number): number {
     return seed;
 }
 
+// gets a hash code from the CID string
 function hashCode(str: string): number {
     let hash = 0;
     if (str) {
         const l = str.length;
-        for (let i = 0; i < l; i++) {
+        // iterate through CID in reverse, cause CIDs that start similarly (aka CIDs that have been posted close to each other)
+        //   have too similar hash code results. this provides more variety
+        for (let i = l - 1; i >= 0; i--) {
             hash = (hash << 5) - hash + str.charCodeAt(i);
             hash |= 0;
             hash = xorshift(hash);
@@ -61,7 +60,7 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
         let cursor = params.cursor ? params.cursor : undefined
 
         let position: number = 0  // the return array will be sliced from this position to the limit, default is 0 if no cursor is provided
-        let randId: number = Number.MIN_SAFE_INTEGER
+        let randId: number = Number.MIN_SAFE_INTEGER  // we'll use this to track where we are in the list from the cursor
 
         if (cursor !== undefined) {
             const [randIdCur, did] = cursor.split('::')
@@ -109,14 +108,16 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
 
         console.log('[chaos] follow results: ', queryResult.records.length)
 
+        // give each post a randId, statically hashed from its CID
         let posts: PostData[] = []
         for (let i = 0; i < queryResult.records.length; i++) {
             posts.push({
-                randId: hashCode(reverseString(queryResult.records[i].get(2))),
+                randId: hashCode(queryResult.records[i].get(2)),
                 uri: queryResult.records[i].get(1),
             })
         }
 
+        // sort posts by randId
         posts.sort((a, b) => {
             if (a.randId < b.randId) {
                 return -1
@@ -127,6 +128,7 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
             }
         })
 
+        // find position based on randId from cursor
         for (position = 0; position < posts.length; position++)
         {
             if (posts[position].randId > randId) {
@@ -134,6 +136,7 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
             }
         }
 
+        // slice array from position to limit
         posts = posts.slice(position, position + limit)
         if (posts.length > 0) randId = posts[posts.length - 1].randId
 
