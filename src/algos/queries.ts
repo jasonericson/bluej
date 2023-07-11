@@ -68,6 +68,6 @@ export const followSimpleQuery =
     'WHERE post.indexedAt IS NOT NULL  AND NOT exists((post)-[:PARENT]->(:Post)) ' +
     'WITH localDateTime() - post.indexedAt as duration, post ' +
     'WHERE duration.day < 1 AND duration.hour < 12 ' +
-    'RETURN ID(post), post.uri, post.cid ' +
+    'RETURN ID(post), post.uri, post.cid, post.repostUri ' +
     'ORDER BY post.indexedAt DESC ' +
     'LIMIT 500'

@@ -19,6 +19,7 @@ let userLastSeeds: Array<LastSeed> = []
 interface PostData {
     randId: number;
     uri: string;
+    repostUri: string;
 }
 
 // check the userLastSeeds array every 60 minutes and remove any entry that is older than 12 hours
@@ -142,6 +143,7 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
             posts.push({
                 randId: hashCode(queryResult.records[i].get(2), seed),
                 uri: queryResult.records[i].get(1),
+                repostUri: queryResult.records[i].get(3),
             })
         }
 
@@ -171,9 +173,21 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
         cursor = encodeURI(randId + '::' + requesterDid)
 
         // The feed format contains an array of post: uri, so map it to just this field
-        const feed = posts.map((row) => ({
-            post: row.uri,
-        }))
+        const feed = posts.map((row) => {
+            if (row.repostUri !== null && row.repostUri !== undefined) {
+                return {
+                    post: row.repostUri,
+                    reason: {
+                        $type: "app.bsky.feed.defs#skeletonReasonRepost",
+                        repost: row.uri,
+                    }
+                }
+            } else {
+                return {
+                    post: row.uri
+                }
+            }
+        })
 
         return {
             cursor,
