@@ -158,6 +158,34 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
             }
         })
 
+        // remove any reposts that are already here as regular posts
+        let toRemove: PostData[] = []
+        for (let i = 0; i < posts.length; i++) {
+            if (posts[i].repostUri !== null) continue;
+            for (let j = 0; j < posts.length; j++) {
+                if (posts[i].uri == posts[j].repostUri) {
+                    toRemove.push(posts[j])
+                }
+            }
+        }
+        for (let i = 0; i < toRemove.length; i++) {
+            const remove = toRemove[i]
+            posts.splice(posts.indexOf(remove), 1);
+        }
+
+        // remove duplicate reposts (keep the first one in the list)
+        for (let i = 0; i < posts.length; i++) {
+            if (posts[i].repostUri === null) continue;
+            let j = i + 1
+            while (j < posts.length) {
+                if (posts[i].repostUri == posts[j].repostUri) {
+                    posts.splice(j, 1)
+                } else {
+                    j++
+                }
+            }
+        }
+
         // find position based on randId from cursor
         for (position = 0; position < posts.length; position++)
         {
