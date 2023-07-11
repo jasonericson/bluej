@@ -10,10 +10,23 @@ import { followSimpleQuery } from './queries'
 
 export const uri = 'at://did:plc:da4qrww7zq3flsr2zialldef/app.bsky.feed.generator/chaos'
 
+interface LastSeed {
+    seed: number;
+    timestamp: number;
+}
+let userLastSeeds: Array<LastSeed> = []
+
 interface PostData {
     randId: number;
     uri: string;
 }
+
+// check the userLastSeeds array every 60 minutes and remove any entry that is older than 12 hours
+setInterval(() => {
+    const currentTime = Date.now()
+    const twelveHoursAgo = currentTime - (12 * 60 * 60 * 1000)
+    userLastSeeds = userLastSeeds.filter(lastSeed => lastSeed.timestamp > twelveHoursAgo)
+}, 60 * 60 * 1000)
 
 function xorshift(value: number): number {
     // Xorshift*32
@@ -30,14 +43,14 @@ function getSafeSeed(seed: number): number {
 }
 
 // gets a hash code from the CID string
-function hashCode(str: string): number {
+function hashCode(str: string, seed: number): number {
     let hash = 0;
     if (str) {
         const l = str.length;
         // iterate through CID in reverse, cause CIDs that start similarly (aka CIDs that have been posted close to each other)
         //   have too similar hash code results. this provides more variety
         for (let i = l - 1; i >= 0; i--) {
-            hash = (hash << 5) - hash + str.charCodeAt(i);
+            hash = (hash << 5) - hash + str.charCodeAt(i) + seed;
             hash |= 0;
             hash = xorshift(hash);
         }
@@ -108,11 +121,26 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
 
         console.log('[chaos] follow results: ', queryResult.records.length)
 
+        // get the sorting seed
+        let seed = 0
+        if (userLastSeeds[requesterDid] !== undefined && userLastSeeds[requesterDid].seed !== undefined) {
+            seed = userLastSeeds[requesterDid].seed
+        }
+
+        // an undefined cursor and larger limit indicates a full refresh, so we'll update the seed to reorder everything
+        if (cursor === undefined && limit > 20) {
+            seed += 1
+            userLastSeeds[requesterDid] = {
+                seed: seed,
+                timestamp: Date.now()
+            }
+        }
+
         // give each post a randId, statically hashed from its CID
         let posts: PostData[] = []
         for (let i = 0; i < queryResult.records.length; i++) {
             posts.push({
-                randId: hashCode(queryResult.records[i].get(2)),
+                randId: hashCode(queryResult.records[i].get(2), seed),
                 uri: queryResult.records[i].get(1),
             })
         }
