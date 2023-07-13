@@ -25,7 +25,7 @@ const run = async () => {
 
   // (Optional) A description of your feed
   // Ex: Top trending content from the whole network
-  const description = 'The anti-algorithm: an entirely random collection of skeets from people you\'re following, from the last 12 hours.'
+  const description = 'The anti-algorithm: an entirely random collection of posts from people you\'re following, from the last 12 hours.'
 
   // (Optional) The path to an image to be used as your feed's avatar
   // Ex: ~/path/to/avatar.jpeg
