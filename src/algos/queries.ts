@@ -71,3 +71,9 @@ export const followSimpleQuery =
     'RETURN ID(post), post.uri, post.cid, post.repostUri ' +
     'ORDER BY post.indexedAt DESC ' +
     'LIMIT 500'
+
+export const clearOldPostsQuery =
+    'MATCH (post:Post) ' +
+    'WITH localDateTime() - post.indexedAt as duration, post ' +
+    'WHERE duration.second > 43200 ' +
+    'DETACH DELETE post '

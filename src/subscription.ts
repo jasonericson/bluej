@@ -6,6 +6,7 @@ import {
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
 import { Database } from './db'
 const neo4j = require('neo4j-driver')
+import { clearOldPostsQuery } from './algos/queries'
 
 const verbose = false
 const outputError = false
@@ -20,6 +21,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
   private driver: Driver;
   private queryQueue: RetryableQuery[];
   private intervalId?: NodeJS.Timeout;
+  private clearIntervalId?: NodeJS.Timeout;
 
   constructor(public db: Database, public service: string) {
     super(db, service)
@@ -27,6 +29,11 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     this.queryQueue = [];
     this.intervalId = undefined;
     this.startProcessingQueue()
+
+    // every 5 minutes, run a query that clears any posts older than 12 hours
+    setInterval(() => {
+      this.executeQuery(clearOldPostsQuery)
+    }, 5 * 60 * 1000);
   }
 
   async handleEvent(evt: RepoEvent) {
@@ -109,7 +116,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     }
   }
 
-  async executeQuery(query: string, params: object, retryCount: number = 10): Promise<void> {
+  async executeQuery(query: string, params: object = {}, retryCount: number = 10): Promise<void> {
     const session = this.driver.session()
     try {
       await session.run(query, params);
