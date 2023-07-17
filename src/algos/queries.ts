@@ -75,5 +75,5 @@ export const followSimpleQuery =
 export const clearOldPostsQuery =
     'MATCH (post:Post) ' +
     'WITH localDateTime() - post.indexedAt as duration, post ' +
-    'WHERE duration.second > 43200 ' +
+    'WHERE duration.second > 60 * 60 * 12 ' +
     'DETACH DELETE post '

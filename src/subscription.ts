@@ -33,6 +33,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     // every 5 minutes, run a query that clears any posts older than 12 hours
     setInterval(() => {
       this.executeQuery(clearOldPostsQuery)
+      console.log("Ran query to clear old posts")
     }, 5 * 60 * 1000);
   }
 
