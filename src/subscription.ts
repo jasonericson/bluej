@@ -22,6 +22,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
   private queryQueue: RetryableQuery[];
   private intervalId?: NodeJS.Timeout;
   private clearIntervalId?: NodeJS.Timeout;
+  private lastClearTime: number
 
   constructor(public db: Database, public service: string) {
     super(db, service)
@@ -30,15 +31,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     this.intervalId = undefined;
     this.startProcessingQueue()
 
-    // every 5 minutes, run a query that clears any posts older than 12 hours
-    setInterval(async () => {
-      try {
-        await this.executeQuery(clearOldPostsQuery)
-        console.log("Ran query to clear old posts")
-      } catch (err) {
-        console.error('[ERROR POST DELETE]: ', err)
-      }
-    }, 5 * 60 * 1000);
+    this.lastClearTime = new Date().getTime()
   }
 
   async handleEvent(evt: RepoEvent) {
@@ -117,6 +110,18 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       for (const repost of ops.reposts.creates) {
         if (verbose) process.stdout.write('r')
         await this.executeQuery("CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()}) MERGE (person:Person {did: $author}) ON CREATE SET person.follows_primed = false MERGE (person)-[:AUTHOR_OF {weight: 0}]->(p) RETURN p", { uri: repost.uri, cid: repost.cid, author: repost.author, repostUri: repost.record.subject.uri, createdAt: repost.record.createdAt })
+      }
+    }
+
+    const now = new Date().getTime()
+    const timeSinceLastClear = now - this.lastClearTime
+    if (timeSinceLastClear > 5 * 60 * 1000) {
+      try {
+        this.lastClearTime = now
+        await this.executeQuery(clearOldPostsQuery)
+        console.log("Ran query to clear old posts")
+      } catch (err) {
+        console.error('[ERROR POST DELETE]: ', err)
       }
     }
   }
