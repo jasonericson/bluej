@@ -31,9 +31,13 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     this.startProcessingQueue()
 
     // every 5 minutes, run a query that clears any posts older than 12 hours
-    setInterval(() => {
-      this.executeQuery(clearOldPostsQuery)
-      console.log("Ran query to clear old posts")
+    setInterval(async () => {
+      try {
+        await this.executeQuery(clearOldPostsQuery)
+        console.log("Ran query to clear old posts")
+      } catch (err) {
+        console.error('[ERROR POST DELETE]: ', err)
+      }
     }, 5 * 60 * 1000);
   }
 
