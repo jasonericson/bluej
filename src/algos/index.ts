@@ -11,10 +11,10 @@ import * as Chaos from './chaos'
 type AlgoHandler = (ctx: AppContext, params: QueryParams, requesterDid: string) => Promise<AlgoOutput>
 
 const algos: Record<string, AlgoHandler> = {
-  [FriendsAndCommunity.uri]: FriendsAndCommunity.handler,
-  [HomePlus.uri]: HomePlus.handler,
-  [Authors.uri]: Authors.handler,
-  [Chaos.uri]: Chaos.handler,
+  [FriendsAndCommunity.shortname]: FriendsAndCommunity.handler,
+  [HomePlus.shortname]: HomePlus.handler,
+  [Authors.shortname]: Authors.handler,
+  [Chaos.shortname]: Chaos.handler,
 }
 
 export default algos

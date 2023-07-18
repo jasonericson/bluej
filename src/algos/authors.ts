@@ -6,11 +6,11 @@ import { parallelQueries } from './parralel-queries'
 import { deduplicateArray } from './weighted-round-robin'
 import { ParallelQueriesOutput } from './parralel-queries'
 
-export const uri = 'at://did:plc:2wqomm3tjqbgktbrfwgvrw34/app.bsky.feed.generator/authors'
+export const shortname = 'authors'
 
 const authorQuery =
     'MATCH (post:Post) ' +
-    'WHERE post.text CONTAINS "#author" OR post.text CONTAINS "📚"' +
+    'WHERE post.text CONTAINS "#author"' +
     'RETURN ID(post), post.uri, 1 as hour_age, 2 as likes, 3 as score ' +
     'ORDER BY post.indexedAt DESC ' +
     'LIMIT 300'
