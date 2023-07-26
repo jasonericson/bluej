@@ -94,21 +94,21 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         })
       }
     }
-    if (ops.likes.deletes.length > 0) {
-      for (const like of ops.likes.deletes) {
-        if (verbose) process.stdout.write('L')
-        //FIXME sane situation as with follows.delete, just a URI and not a full source -> dest mapping
-      }
-    }
-    if (ops.likes.creates.length > 0) {
-      for (const like of ops.likes.creates) {
-        if (verbose) process.stdout.write('l')
-        await this.executeQuery("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", {
-          authorDid: like.author,
-          postUri: like.record.subject.uri
-        })
-      }
-    }
+    // if (ops.likes.deletes.length > 0) {
+    //   for (const like of ops.likes.deletes) {
+    //     if (verbose) process.stdout.write('L')
+    //     //FIXME sane situation as with follows.delete, just a URI and not a full source -> dest mapping
+    //   }
+    // }
+    // if (ops.likes.creates.length > 0) {
+    //   for (const like of ops.likes.creates) {
+    //     if (verbose) process.stdout.write('l')
+    //     await this.executeQuery("MERGE (person:Person {did: $authorDid}) MERGE (post:Post {uri: $postUri}) MERGE (person)-[:LIKE {weight: 1}]->(post)", {
+    //       authorDid: like.author,
+    //       postUri: like.record.subject.uri
+    //     })
+    //   }
+    // }
     if (ops.reposts.deletes.length > 0) {
       for (const repost of ops.reposts.deletes) {
         if (verbose) process.stdout.write('R')
