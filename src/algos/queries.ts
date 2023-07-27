@@ -77,3 +77,15 @@ export const clearOldPostsQuery =
     'WITH localDateTime() - post.indexedAt as duration, post ' +
     'WHERE duration.second > 60 * 60 * 12 ' +
     'DETACH DELETE post '
+
+export const postsFromTopEightQuery = `
+    MATCH (p1:Person {did: $did })-[l:LIKE]->(p2:Person)
+    WHERE exists((p1)-[:FOLLOW]->(p2))
+    WITH reduce(totalLikes = 0, n in l.days | totalLikes + n) as likes, p1, l, p2
+    ORDER BY likes DESC
+    LIMIT 8
+    MATCH (p2)-[:AUTHOR_OF]->(post:Post)
+    RETURN ID(post), post.uri, post.cid, post.repostUri
+    ORDER BY post.indexedAt
+    LIMIT 500
+`
