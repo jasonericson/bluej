@@ -72,6 +72,11 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
             service: 'https://bsky.social/'
         })
 
+        if (requesterDid.length === 0) {
+            console.log('[ERROR] requesterDid is empty, using default')
+            requesterDid = 'did:plc:da4qrww7zq3flsr2zialldef'
+        }
+
         let limit = params.limit ? params.limit : 50
         let cursor = params.cursor ? params.cursor : undefined
 
@@ -99,7 +104,8 @@ export const handler = async (ctx: AppContext, params: QueryParams, requesterDid
         // (for any people they followed before this feed service started running)
         let session = driver.session()
         let followsPrimedResult = await session.run('MATCH (requester:Person { did:$requesterDid }) RETURN requester.follows_primed', { requesterDid: requesterDid })
-        if (followsPrimedResult.records.length === 0 || followsPrimedResult.records[0].get(0) === false) {
+        if (followsPrimedResult.records.length === 0 || followsPrimedResult.records[0].get(0) !== true) {
+            console.log("priming follows")
             await agent.login({ identifier: <string>process.env.FEEDGEN_HANDLE, password: <string>process.env.FEEDGEN_PASSWORD })
 
             let followCount = 0
