@@ -20,6 +20,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
   private intervalId?: NodeJS.Timeout;
   private clearIntervalId?: NodeJS.Timeout;
   private lastClearTime: number
+  private lastHour: number
 
   constructor(public db: Database, public service: string) {
     super(db, service)
@@ -31,6 +32,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     this.startProcessingQueue()
 
     this.lastClearTime = new Date().getTime()
+    this.lastHour = -1
   }
 
   async handleEvent(evt: RepoEvent) {
@@ -161,7 +163,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       }
     }
 
-    const now = new Date().getTime()
+    const today = new Date()
+    const now = today.getTime()
     const timeSinceLastClear = now - this.lastClearTime
     if (timeSinceLastClear > 5 * 60 * 1000) {
       try {
@@ -172,6 +175,20 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         console.error('[ERROR POST DELETE]: ', err)
       }
     }
+
+    // at midnight, shift all the link records over a day
+    if (today.getHours() === 0 && this.lastHour !== 0) {
+      try {
+        await this.executeQuery(`
+          MATCH (:Person)-[l:LIKE]->(:Person)
+          SET l.days = [0] + l.days[0..6]
+          `)
+        console.log("Ran query to shift likes over a day")
+      } catch (err) {
+        console.error('[ERROR SHIFT DAYS]: ', err)
+      }
+    }
+    this.lastHour = today.getHours()
   }
 
   async executeQuery(query: string, params: object = {}, retryCount: number = 10): Promise<void> {
