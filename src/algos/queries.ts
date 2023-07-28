@@ -19,8 +19,8 @@ export const clearOldPostsQuery =
 export const postsFromTopEightQuery = `
     MATCH (p1:Person {did: $did })-[i:INTERACTION]->(p2:Person)
     WHERE exists((p1)-[:FOLLOW]->(p2))
-    WITH reduce(totalLikes = 0, n in i.likes | totalLikes + n) as likes, p2
-    ORDER BY likes DESC
+    WITH reduce(totalLikes = 0, n in i.likes | totalLikes + n) * 1 + reduce(totalReposts = 0, n in i.reposts | totalReposts + n) * 2 + reduce(totalReplies = 0, n in i.replies | totalReplies + n) * 3 as score, p2
+    ORDER BY score DESC
     LIMIT 8
     MATCH (p2)-[:AUTHOR_OF]->(post:Post)
     WHERE post.indexedAt IS NOT NULL AND NOT exists((post)-[:PARENT]->(:Post))
