@@ -123,9 +123,9 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           MATCH (p2:Person)-[:AUTHOR_OF]->(likedPost)
           MERGE (p1:Person {did: $authorDid})
           ON CREATE SET p1.follows_primed = false
-          MERGE (p1)-[l:LIKE]->(p2)
-          ON CREATE SET l.days = [1,0,0,0,0,0,0]
-          ON MATCH SET l.days = [l.days[0] + 1] + l.days[1..7]`, {
+          MERGE (p1)-[i:INTERACTION]->(p2)
+          ON CREATE SET i.likes = [1,0,0,0,0,0,0], i.replies = [0,0,0,0,0,0,0], i.reposts = [0,0,0,0,0,0,0]
+          ON MATCH SET i.likes = [i.likes[0] + 1] + i.likes[1..7]`, {
           postUri: like.record.subject.uri,
           authorDid: like.author,
         })
@@ -180,8 +180,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (today.getHours() === 0 && this.lastHour !== 0) {
       try {
         await this.executeQuery(`
-          MATCH (:Person)-[l:LIKE]->(:Person)
-          SET l.days = [0] + l.days[0..6]
+          MATCH (:Person)-[i:INTERACTION]->(:Person)
+          SET i.likes = [0] + i.likes[0..6], i.replies = [0] + i.replies[0..6], i.reposts = [0] + i.reposts[0..6]
           `)
         console.log("Ran query to shift likes over a day")
       } catch (err) {
