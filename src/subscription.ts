@@ -32,7 +32,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     this.startProcessingQueue()
 
     this.lastClearTime = new Date().getTime()
-    this.lastHour = -1
+    this.lastHour = 0
   }
 
   async handleEvent(evt: RepoEvent) {
