@@ -57,7 +57,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           CREATE (post:Post {uri: $uri, cid: $cid, author: $author, text: $text, createdAt: $createdAt, indexedAt: LocalDateTime()})
           MERGE (person:Person {did: $author})
           ON CREATE SET person.follows_primed = false
-          MERGE (person)-[:AUTHOR_OF {weight: 0}]->(post)`, {
+          MERGE (person)-[:AUTHOR_OF]->(post)`, {
           uri: post.uri,
           cid: post.cid,
           author: post.author,
@@ -70,7 +70,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           await this.executeQuery(`
             MERGE (post1:Post {uri: $uri})
             MERGE (post2:Post {uri: $rootUri})
-            MERGE (post1)-[:ROOT {weight: 0}]->(post2)`, {
+            MERGE (post1)-[:ROOT]->(post2)`, {
             uri: post.uri,
             rootUri: replyRoot
           })
@@ -79,9 +79,23 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           await this.executeQuery(`
             MERGE (post1:Post {uri: $uri})
             MERGE (post2:Post {uri: $parentUri})
-            MERGE (post1)-[:PARENT {weight: 0}]->(post2)`, {
+            MERGE (post1)-[:PARENT]->(post2)`, {
             uri: post.uri,
-            parentUri: replyParent
+            parentUri: replyParent,
+          })
+          // record interaction
+          await this.executeQuery(`
+            MATCH (post2:Post {uri: $parentUri})
+            MATCH (person2:Person)-[:AUTHOR_OF]->(post2)
+            WHERE person2.did != $author
+            MATCH (post1:Post {uri: $uri})
+            MATCH (person1:Person {did: $author})
+            MERGE (person1)-[i:INTERACTION]->(person2)
+            ON CREATE SET i.likes = [0,0,0,0,0,0,0], i.replies = [1,0,0,0,0,0,0], i.reposts = [0,0,0,0,0,0,0]
+            ON MATCH SET i.replies = [i.replies[0] + 1] + i.replies[1..7]`, {
+            parentUri: replyParent,
+            author: post.author,
+            uri: post.uri,
           })
         }
       }
@@ -121,6 +135,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           END AS uri
           MATCH (likedPost:Post {uri: uri})
           MATCH (p2:Person)-[:AUTHOR_OF]->(likedPost)
+          WHERE p2.did != $authorDid
           MERGE (p1:Person {did: $authorDid})
           ON CREATE SET p1.follows_primed = false
           MERGE (p1)-[i:INTERACTION]->(p2)
@@ -152,13 +167,26 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           CREATE (p:Post {uri: $uri, cid: $cid, author: $author, repostUri: $repostUri, createdAt: $createdAt, indexedAt: LocalDateTime()})
           MERGE (person:Person {did: $author})
           ON CREATE SET person.follows_primed = false
-          MERGE (person)-[:AUTHOR_OF {weight: 0}]->(p)
+          MERGE (person)-[:AUTHOR_OF]->(p)
           RETURN p`, {
           uri: repost.uri,
           cid: repost.cid,
           author: repost.author,
           repostUri: repost.record.subject.uri,
           createdAt: repost.record.createdAt
+        })
+        // record interaction
+        await this.executeQuery(`
+          MATCH (ogPost:Post {uri: $repostUri})
+          MATCH (ogAuthor:Person)-[:AUTHOR_OF]->(ogPost)
+          WHERE ogAuthor.did != $author
+          MATCH (rpAuthor:Person {did: $author})
+          MERGE (rpAuthor)-[i:INTERACTION]->(ogAuthor)
+          ON CREATE SET i.likes = [0,0,0,0,0,0,0], i.replies = [0,0,0,0,0,0,0], i.reposts = [1,0,0,0,0,0,0]
+          ON MATCH SET i.reposts = [i.reposts[0] + 1] + i.reposts[1..7]
+          `, {
+            repostUri: repost.record.subject.uri,
+            author: repost.author,
         })
       }
     }
