@@ -85,6 +85,7 @@ export const postsFromTopEightQuery = `
     ORDER BY likes DESC
     LIMIT 8
     MATCH (p2)-[:AUTHOR_OF]->(post:Post)
+    WHERE post.indexedAt IS NOT NULL AND NOT exists((post)-[:PARENT]->(:Post))
     RETURN ID(post), post.uri, post.cid, post.repostUri
     ORDER BY post.indexedAt DESC
     LIMIT 500
