@@ -86,6 +86,6 @@ export const postsFromTopEightQuery = `
     LIMIT 8
     MATCH (p2)-[:AUTHOR_OF]->(post:Post)
     RETURN ID(post), post.uri, post.cid, post.repostUri
-    ORDER BY post.indexedAt
+    ORDER BY post.indexedAt DESC
     LIMIT 500
 `
