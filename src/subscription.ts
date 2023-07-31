@@ -83,20 +83,20 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             uri: post.uri,
             parentUri: replyParent,
           })
-          // record interaction
-          await this.executeQuery(`
-            MATCH (post2:Post {uri: $parentUri})
-            MATCH (person2:Person)-[:AUTHOR_OF]->(post2)
-            WHERE person2.did != $author
-            MATCH (post1:Post {uri: $uri})
-            MATCH (person1:Person {did: $author})
-            MERGE (person1)-[i:INTERACTION]->(person2)
-            ON CREATE SET i.likes = [0,0,0,0,0,0,0], i.replies = [1,0,0,0,0,0,0], i.reposts = [0,0,0,0,0,0,0]
-            ON MATCH SET i.replies = [i.replies[0] + 1] + i.replies[1..7]`, {
-            parentUri: replyParent,
-            author: post.author,
-            uri: post.uri,
-          })
+          // // record interaction
+          // await this.executeQuery(`
+          //   MATCH (post2:Post {uri: $parentUri})
+          //   MATCH (person2:Person)-[:AUTHOR_OF]->(post2)
+          //   WHERE person2.did != $author
+          //   MATCH (post1:Post {uri: $uri})
+          //   MATCH (person1:Person {did: $author})
+          //   MERGE (person1)-[i:INTERACTION]->(person2)
+          //   ON CREATE SET i.likes = [0,0,0,0,0,0,0], i.replies = [1,0,0,0,0,0,0], i.reposts = [0,0,0,0,0,0,0]
+          //   ON MATCH SET i.replies = [i.replies[0] + 1] + i.replies[1..7]`, {
+          //   parentUri: replyParent,
+          //   author: post.author,
+          //   uri: post.uri,
+          // })
         }
       }
     }
@@ -126,21 +126,22 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     }
     if (ops.likes.creates.length > 0) {
       for (const like of ops.likes.creates) {
-        await this.executeQuery(`
-          MATCH (p:Post {uri: $postUri})
-          WITH p,
-          CASE
-            WHEN p.repostUri IS NOT NULL THEN p.repostUri
-            ELSE p.uri
-          END AS uri
-          MATCH (likedPost:Post {uri: uri})
+        await this.executeQuery(
+          // MATCH (p:Post {uri: $postUri})
+          // WITH p,
+          // CASE
+          //   WHEN p.repostUri IS NOT NULL THEN p.repostUri
+          //   ELSE p.uri
+          // END AS uri
+          // MATCH (likedPost:Post {uri: uri})
+          `MATCH (likedPost:Post {uri: $postUri})
           MATCH (p2:Person)-[:AUTHOR_OF]->(likedPost)
           WHERE p2.did != $authorDid
           MERGE (p1:Person {did: $authorDid})
-          ON CREATE SET p1.follows_primed = false
-          MERGE (p1)-[i:INTERACTION]->(p2)
-          ON CREATE SET i.likes = [1,0,0,0,0,0,0], i.replies = [0,0,0,0,0,0,0], i.reposts = [0,0,0,0,0,0,0]
-          ON MATCH SET i.likes = [i.likes[0] + 1] + i.likes[1..7]`, {
+          ON CREATE SET p1.follows_primed = false`, {
+          // MERGE (p1)-[i:INTERACTION]->(p2)
+          // ON CREATE SET i.likes = [1,0,0,0,0,0,0], i.replies = [0,0,0,0,0,0,0], i.reposts = [0,0,0,0,0,0,0]
+          // ON MATCH SET i.likes = [i.likes[0] + 1] + i.likes[1..7]`, {
           postUri: like.record.subject.uri,
           authorDid: like.author,
         })
@@ -175,19 +176,19 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           repostUri: repost.record.subject.uri,
           createdAt: repost.record.createdAt
         })
-        // record interaction
-        await this.executeQuery(`
-          MATCH (ogPost:Post {uri: $repostUri})
-          MATCH (ogAuthor:Person)-[:AUTHOR_OF]->(ogPost)
-          WHERE ogAuthor.did != $author
-          MATCH (rpAuthor:Person {did: $author})
-          MERGE (rpAuthor)-[i:INTERACTION]->(ogAuthor)
-          ON CREATE SET i.likes = [0,0,0,0,0,0,0], i.replies = [0,0,0,0,0,0,0], i.reposts = [1,0,0,0,0,0,0]
-          ON MATCH SET i.reposts = [i.reposts[0] + 1] + i.reposts[1..7]
-          `, {
-            repostUri: repost.record.subject.uri,
-            author: repost.author,
-        })
+        // // record interaction
+        // await this.executeQuery(`
+        //   MATCH (ogPost:Post {uri: $repostUri})
+        //   MATCH (ogAuthor:Person)-[:AUTHOR_OF]->(ogPost)
+        //   WHERE ogAuthor.did != $author
+        //   MATCH (rpAuthor:Person {did: $author})
+        //   MERGE (rpAuthor)-[i:INTERACTION]->(ogAuthor)
+        //   ON CREATE SET i.likes = [0,0,0,0,0,0,0], i.replies = [0,0,0,0,0,0,0], i.reposts = [1,0,0,0,0,0,0]
+        //   ON MATCH SET i.reposts = [i.reposts[0] + 1] + i.reposts[1..7]
+        //   `, {
+        //     repostUri: repost.record.subject.uri,
+        //     author: repost.author,
+        // })
       }
     }
 
@@ -204,18 +205,18 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       }
     }
 
-    // at midnight, shift all the link records over a day
-    if (today.getHours() === 0 && this.lastHour !== 0) {
-      try {
-        await this.executeQuery(`
-          MATCH (:Person)-[i:INTERACTION]->(:Person)
-          SET i.likes = [0] + i.likes[0..6], i.replies = [0] + i.replies[0..6], i.reposts = [0] + i.reposts[0..6]
-          `)
-        console.log("Ran query to shift likes over a day")
-      } catch (err) {
-        console.error('[ERROR SHIFT DAYS]: ', err)
-      }
-    }
+    // // at midnight, shift all the link records over a day
+    // if (today.getHours() === 0 && this.lastHour !== 0) {
+    //   try {
+    //     await this.executeQuery(`
+    //       MATCH (:Person)-[i:INTERACTION]->(:Person)
+    //       SET i.likes = [0] + i.likes[0..6], i.replies = [0] + i.replies[0..6], i.reposts = [0] + i.reposts[0..6]
+    //       `)
+    //     console.log("Ran query to shift likes over a day")
+    //   } catch (err) {
+    //     console.error('[ERROR SHIFT DAYS]: ', err)
+    //   }
+    // }
     this.lastHour = today.getHours()
   }
 
