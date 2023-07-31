@@ -1,4 +1,4 @@
-import { Driver, Session } from 'neo4j-driver'
+import { QueryResult, Record, Driver, Session } from 'neo4j-driver'
 import { OutputSchema as RepoEvent, isCommit } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
 import { Database } from './db'
@@ -124,29 +124,43 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         })
       }
     }
+
     if (ops.likes.creates.length > 0) {
       for (const like of ops.likes.creates) {
-        await this.executeQuery(
-          // MATCH (p:Post {uri: $postUri})
-          // WITH p,
-          // CASE
-          //   WHEN p.repostUri IS NOT NULL THEN p.repostUri
-          //   ELSE p.uri
-          // END AS uri
-          // MATCH (likedPost:Post {uri: uri})
-          `MATCH (likedPost:Post {uri: $postUri})
-          MATCH (p2:Person)-[:AUTHOR_OF]->(likedPost)
-          WHERE p2.did != $authorDid
-          MERGE (p1:Person {did: $authorDid})
-          ON CREATE SET p1.follows_primed = false`, {
-          // MERGE (p1)-[i:INTERACTION]->(p2)
-          // ON CREATE SET i.likes = [1,0,0,0,0,0,0], i.replies = [0,0,0,0,0,0,0], i.reposts = [0,0,0,0,0,0,0]
-          // ON MATCH SET i.likes = [i.likes[0] + 1] + i.likes[1..7]`, {
-          postUri: like.record.subject.uri,
-          authorDid: like.author,
+        const session = this.driver.session()
+        const result = await session.run(`
+          MATCH (p:Post {uri: $postUri})
+          WHERE p.repostUri IS NOT NULL
+          RETURN p.repostUri
+        `, {
+          postUri: like.record.subject.uri
         })
+        await session.close()
+        if (result.records.length > 0) {
+          const repostUri = result.records[0]
+          console.log(repostUri)
+        }
+        // await this.executeQuery(`
+        //   MATCH (p:Post {uri: $postUri})
+        //   WITH p,
+        //   CASE
+        //     WHEN p.repostUri IS NOT NULL THEN p.repostUri
+        //     ELSE p.uri
+        //   END AS uri
+        //   MATCH (likedPost:Post {uri: uri})
+        //   MATCH (p2:Person)-[:AUTHOR_OF]->(likedPost)
+        //   WHERE p2.did != $authorDid
+        //   MERGE (p1:Person {did: $authorDid})
+        //   ON CREATE SET p1.follows_primed = false
+        //   MERGE (p1)-[i:INTERACTION]->(p2)
+        //   ON CREATE SET i.likes = [1,0,0,0,0,0,0], i.replies = [0,0,0,0,0,0,0], i.reposts = [0,0,0,0,0,0,0]
+        //   ON MATCH SET i.likes = [i.likes[0] + 1] + i.likes[1..7]`, {
+        //   postUri: like.record.subject.uri,
+        //   authorDid: like.author,
+        // })
       }
     }
+
     // if (ops.likes.deletes.length > 0) {
     //   for (const like of ops.likes.deletes) {
     //     if (verbose) process.stdout.write('L')
