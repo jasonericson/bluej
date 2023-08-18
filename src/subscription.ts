@@ -103,25 +103,27 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (ops.follows.deletes.length > 0) {
       for (const follow of ops.follows.deletes) {
         if (verbose) process.stdout.write('F')
-        //FIXME the record only contains a URI without a source -> dest DID mapping. There is a URI in the at:// uri, but no destination is specificed
-        // So not sure yet how to delete the follow relationship in a graph 
-        //{
-        //  uri: 'at://did:plc:oftvwqwimefeuzes4nwinubh/app.bsky.graph.follow/3jvcsau7em22q'
-        //}
-        //process.stdout.write(util.inspect(follow, false, null, true))
+          const result = await this.executeQuery(`
+            MATCH (f:FOLLOW {uri: $uri})
+            DETACH DELETE f
+          `, {
+            uri: follow.uri
+          })
       }
     }
     if (ops.follows.creates.length > 0) {
       for (const follow of ops.follows.creates) {
         if (verbose) process.stdout.write('f')
-        await this.executeQuery(`
-          MERGE (p1:Person {did: $authorDid})
-          ON CREATE SET p1.follows_primed = false
-          MERGE (p2:Person {did: $subjectDid})
-          MERGE (p1)-[:FOLLOW {weight: 2}]->(p2)`, {
-          authorDid: follow.author,
-          subjectDid: follow.record.subject
-        })
+          await this.executeQuery(`
+            MERGE (p1:Person {did: $authorDid})
+            ON CREATE SET p1.follows_primed = false
+            MERGE (p2:Person {did: $subjectDid})
+            MERGE (p1)-[:FOLLOW {uri: $uri}]->(p2)
+          `, {
+            authorDid: follow.author,
+            subjectDid: follow.record.subject,
+            uri: follow.uri,
+          })
       }
     }
 
